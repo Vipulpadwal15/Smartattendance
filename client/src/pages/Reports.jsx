@@ -10,7 +10,6 @@ import Spinner from '../components/ui/Spinner';
 import Button from '../components/ui/Button';
 
 const Reports = () => {
-    const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [chartData, setChartData] = useState([]);
     const [barData, setBarData] = useState([]);
@@ -18,27 +17,11 @@ const Reports = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const { data: classesData } = await axios.get('/api/classes');
-                setClasses(classesData);
+                // Fetch Real Analytics Data
+                const { data } = await axios.get('/api/analytics/reports');
 
-                // Generate Mock/Real Data for visualization
-                // In a real app, we would have dedicated aggregation endpoints.
-                // Here we will mock the trend data based on class list for demonstration of UI.
-
-                const mockTrendIds = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                const trend = mockTrendIds.map(day => ({
-                    day,
-                    attendance: Math.floor(Math.random() * (100 - 70 + 1)) + 70 // Random between 70-100
-                }));
-                setChartData(trend);
-
-                const bars = classesData.map(c => ({
-                    name: c.subjectName,
-                    students: c.students ? c.students.length : 0,
-                    avg: Math.floor(Math.random() * (95 - 60 + 1)) + 60
-                }));
-                setBarData(bars);
-
+                setChartData(data.weeklyTrend);
+                setBarData(data.classPerformance);
             } catch (error) {
                 console.error('Error fetching reports data', error);
             } finally {
@@ -121,14 +104,16 @@ const Reports = () => {
                     </span>
                 </Card>
                 <Card className="flex flex-col items-center justify-center p-6 text-center">
-                    <h4 className="text-gray-500 font-medium mb-2">Avg Weakly Attendance</h4>
+                    <h4 className="text-gray-500 font-medium mb-2">Avg Weekly Attendance</h4>
                     <span className="text-xl font-bold text-secondary">
-                        {Math.floor(chartData.reduce((a, b) => a + b.attendance, 0) / 7)}%
+                        {chartData.length > 0
+                            ? Math.round(chartData.reduce((a, b) => a + b.attendance, 0) / chartData.length)
+                            : 0}%
                     </span>
                 </Card>
                 <Card className="flex flex-col items-center justify-center p-6 text-center">
-                    <h4 className="text-gray-500 font-medium mb-2">Total Reports Generated</h4>
-                    <span className="text-xl font-bold text-orange-500">24</span>
+                    <h4 className="text-gray-500 font-medium mb-2">Total Classes Tracked</h4>
+                    <span className="text-xl font-bold text-orange-500">{barData.length}</span>
                 </Card>
             </div>
         </div>

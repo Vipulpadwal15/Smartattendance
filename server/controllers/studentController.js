@@ -82,6 +82,46 @@ const updateStudent = async (req, res) => {
     }
 };
 
+// @desc    Bulk Create Students
+// @route   POST /api/students/bulk
+// @access  Private
+const bulkCreateStudents = async (req, res) => {
+    const { students, classId } = req.body; // students: [{name, rollNumber}, ...]
+
+    if (!students || !Array.isArray(students) || !classId) {
+        return res.status(400).json({ message: 'Invalid data format' });
+    }
+
+    try {
+        const classItem = await Class.findById(classId);
+        if (!classItem) return res.status(404).json({ message: 'Class not found' });
+        if (classItem.teacher.toString() !== req.user.id) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        // Prepare data
+        const studentsToInsert = students.map(s => ({
+            name: s.name,
+            rollNumber: String(s.rollNumber), // Ensure string
+            classId,
+        }));
+
+        // Insert Many
+        const createdStudents = await Student.insertMany(studentsToInsert, { ordered: false });
+
+        // Update Class with new IDs
+        const newIds = createdStudents.map(s => s._id);
+        classItem.students.push(...newIds);
+        await classItem.save();
+
+        res.status(201).json({ count: createdStudents.length, students: createdStudents });
+
+    } catch (error) {
+        // Handle partial success/failure if needed, but for now standard error
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // @desc    Delete a student
 // @route   DELETE /api/students/:id
 // @access  Private
@@ -118,4 +158,5 @@ module.exports = {
     createStudent,
     updateStudent,
     deleteStudent,
+    bulkCreateStudents,
 };

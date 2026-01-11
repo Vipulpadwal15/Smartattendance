@@ -3,7 +3,7 @@ import { Users, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 
-const ClassCard = ({ classItem, onEdit, onDelete }) => {
+const ClassCard = ({ classItem, onEdit, onDelete, onManage }) => {
     return (
         <Card className="relative group transition-all hover:shadow-lg dark:hover:bg-gray-800/80">
             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
@@ -39,7 +39,16 @@ const ClassCard = ({ classItem, onEdit, onDelete }) => {
                 </span>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-2">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    fullWidth
+                    onClick={(e) => { e.preventDefault(); onManage(classItem); }}
+                    className="text-sm text-gray-600 dark:text-gray-300"
+                >
+                    <Users className="mr-2 h-4 w-4" /> Manage Students
+                </Button>
                 <Button
                     variant="outline"
                     size="sm"

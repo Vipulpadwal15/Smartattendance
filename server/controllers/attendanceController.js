@@ -1,6 +1,9 @@
 const Attendance = require('../models/Attendance');
 const Class = require('../models/Class');
 const dateFns = require('date-fns'); // Assuming date-fns is available or use native Date
+const crypto = require('crypto');
+const AttendanceSession = require('../models/AttendanceSession');
+const Student = require('../models/Student');
 
 // @desc    Mark or Update attendance
 // @route   POST /api/attendance
@@ -88,7 +91,142 @@ const getAttendance = async (req, res) => {
     }
 };
 
+// @desc    Start QR Session
+// @route   POST /api/attendance/session/start
+// @access  Private (Teacher)
+const startSession = async (req, res) => {
+    const { classId } = req.body;
+    try {
+        // Deactivate any existing active sessions for this class
+        await AttendanceSession.updateMany(
+            { classId, isActive: true },
+            { isActive: false }
+        );
+
+        const sessionToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 60 * 1000); // 1 minute expiry (Dynamic QR)
+
+        const session = await AttendanceSession.create({
+            classId,
+            teacherId: req.user.id,
+            sessionToken,
+            isActive: true,
+            expiresAt
+        });
+
+        res.status(201).json(session);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    End QR Session
+// @route   POST /api/attendance/session/end
+// @access  Private (Teacher)
+const endSession = async (req, res) => {
+    const { sessionId } = req.body;
+    try {
+        await AttendanceSession.findByIdAndUpdate(sessionId, { isActive: false });
+        res.json({ message: 'Session ended' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get Active Session for Class
+// @route   GET /api/attendance/session/:classId
+// @access  Private (Teacher)
+const getActiveSession = async (req, res) => {
+    try {
+        const session = await AttendanceSession.findOne({
+            classId: req.params.classId,
+            isActive: true,
+            expiresAt: { $gt: new Date() }
+        });
+        res.json(session);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Mark Attendance via QR
+// @route   POST /api/attendance/mark-qr
+// @access  Public (Student)
+const markAttendanceQR = async (req, res) => {
+    const { sessionToken, rollNumber } = req.body;
+
+    try {
+        // 1. Validate Session
+        const session = await AttendanceSession.findOne({
+            sessionToken,
+            isActive: true,
+            expiresAt: { $gt: new Date() }
+        });
+
+        if (!session) {
+            return res.status(400).json({ message: 'Invalid or Expired QR Code' });
+        }
+
+        // 2. Find Student
+        const student = await Student.findOne({
+            rollNumber,
+            classId: session.classId
+        });
+
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found in this class' });
+        }
+
+        // 3. Find or Create Attendance Logic
+        const now = new Date();
+        // Use UTC Midnight to ensure consistency with frontend which sends "YYYY-MM-DD" (parsed as UTC)
+        const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+        let attendance = await Attendance.findOne({
+            classId: session.classId,
+            date: today
+        });
+
+        if (!attendance) {
+            attendance = await Attendance.create({
+                classId: session.classId,
+                date: today,
+                records: []
+            });
+        }
+
+        // 4. Update Status for specific student
+        const studentIndex = attendance.records.findIndex(r => r.studentId.toString() === student._id.toString());
+
+        if (studentIndex > -1) {
+            if (attendance.records[studentIndex].status === 'Present') {
+                return res.status(200).json({ message: 'Attendance already marked' });
+            }
+            attendance.records[studentIndex].status = 'Present';
+        } else {
+            // Add new record
+            attendance.records.push({
+                studentId: student._id,
+                name: student.name,
+                rollNumber: student.rollNumber,
+                status: 'Present'
+            });
+        }
+
+        await attendance.save();
+
+        res.json({ message: 'Attendance Marked Successfully', student: student.name });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     markAttendance,
     getAttendance,
+    startSession,
+    endSession,
+    getActiveSession,
+    markAttendanceQR
 };

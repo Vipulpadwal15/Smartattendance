@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Save, CheckSquare } from 'lucide-react';
+import { Save, CheckSquare, RefreshCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -19,6 +19,7 @@ const Attendance = () => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [forceRefresh, setForceRefresh] = useState(false);
 
     // Fetch Classes on Mount
     useEffect(() => {
@@ -81,7 +82,7 @@ const Attendance = () => {
         };
 
         fetchData();
-    }, [selectedClassId, selectedDate]);
+    }, [selectedClassId, selectedDate, forceRefresh]);
 
     const handleToggle = (studentId, newStatus) => {
         setAttendanceMap(prev => ({
@@ -148,6 +149,21 @@ const Attendance = () => {
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                     />
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            // Trigger re-fetch by toggling a dummy state or calling fetchData directly
+                            // Since fetchData is inside useEffect, we can't call it directly easily unless we extract it
+                            // Simplest way: just re-trigger by momentarily clearing date or better, extract fetchData
+                            // For now, let's just use a forceRefresh state
+                            setForceRefresh(prev => !prev);
+                        }}
+                        title="Refresh Data"
+                    >
+                        <RefreshCcw className="h-5 w-5 text-gray-500" />
+                    </Button>
                 </div>
             </div>
 

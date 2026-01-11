@@ -69,6 +69,7 @@ const AddClassModal = ({ isOpen, onClose, onSaved, classToEdit }) => {
                     value={subjectName}
                     onChange={(e) => setSubjectName(e.target.value)}
                     placeholder="e.g. Advanced Database Systems"
+                    autoFocus
                 />
                 <Input
                     label="Semester"

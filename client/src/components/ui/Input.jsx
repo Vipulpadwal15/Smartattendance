@@ -26,7 +26,7 @@ const Input = forwardRef(({
                 type={type}
                 className={twMerge(
                     clsx(
-                        'w-full rounded-lg border bg-white px-4 py-2 text-sm transition-colors focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-white',
+                        'w-full rounded-lg border bg-white px-4 py-2 text-sm text-gray-900 transition-colors focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-white',
                         error
                             ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
                             : 'border-gray-300 focus:border-primary focus:ring-primary/20 dark:border-gray-700',

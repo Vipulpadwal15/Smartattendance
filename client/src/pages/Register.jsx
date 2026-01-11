@@ -6,13 +6,14 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 
-const Login = () => {
+const Register = () => {
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const { login } = useContext(AuthContext);
+    const { register } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -20,13 +21,13 @@ const Login = () => {
         setError('');
         setIsSubmitting(true);
 
-        if (!email || !password) {
+        if (!name || !email || !password) {
             setError('Please fill in all fields');
             setIsSubmitting(false);
             return;
         }
 
-        const res = await login(email, password);
+        const res = await register(name, email, password);
         if (res.success) {
             navigate('/dashboard');
         } else {
@@ -37,7 +38,6 @@ const Login = () => {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900 overflow-hidden relative">
-            {/* Background Decoration */}
             <div className="absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-primary/20 blur-[100px]" />
             <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-secondary/20 blur-[100px]" />
 
@@ -49,20 +49,24 @@ const Login = () => {
             >
                 <Card glass className="shadow-2xl border-white/40 dark:border-gray-700/50">
                     <div className="mb-6 text-center">
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</h1>
-                        <p className="mt-2 text-gray-600 dark:text-gray-300">Sign in to manage attendance</p>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create Account</h1>
+                        <p className="mt-2 text-gray-600 dark:text-gray-300">Join SmartAttend as a teacher</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                className="rounded-lg bg-red-50 p-3 text-sm text-red-500 dark:bg-red-900/20"
-                            >
+                            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-500 dark:bg-red-900/20">
                                 {error}
-                            </motion.div>
+                            </div>
                         )}
+
+                        <Input
+                            id="name"
+                            label="Full Name"
+                            placeholder="John Doe"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
 
                         <Input
                             id="email"
@@ -87,13 +91,12 @@ const Login = () => {
                             fullWidth
                             isLoading={isSubmitting}
                         >
-                            Sign In
+                            Sign Up
                         </Button>
                     </form>
 
                     <div className="mt-6 text-center text-sm text-gray-500">
-                        <p>Demo Credentials: teacher@example.com / 123456</p>
-                        <p className="mt-2">New here? <Link to="/register" className="text-primary hover:underline">Create an account</Link></p>
+                        <p>Already have an account? <Link to="/login" className="text-primary hover:underline">Sign in</Link></p>
                     </div>
                 </Card>
             </motion.div>
@@ -101,4 +104,4 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default Register;

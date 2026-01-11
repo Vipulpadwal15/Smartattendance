@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Button from '../components/ui/Button';
 import ClassCard from '../components/ClassCard';
 import AddClassModal from '../components/AddClassModal';
+import ManageStudentsModal from '../components/ManageStudentsModal';
 import Spinner from '../components/ui/Spinner';
 
 const Classes = () => {
@@ -12,6 +13,8 @@ const Classes = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [classToEdit, setClassToEdit] = useState(null);
+    const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+    const [classToManage, setClassToManage] = useState(null);
 
     const fetchClasses = async () => {
         try {
@@ -37,6 +40,11 @@ const Classes = () => {
     const handleEditClick = (classItem) => {
         setClassToEdit(classItem);
         setIsModalOpen(true);
+    };
+
+    const handleManageClick = (classItem) => {
+        setClassToManage(classItem);
+        setIsManageModalOpen(true);
     };
 
     const handleDeleteClick = async (id) => {
@@ -96,6 +104,7 @@ const Classes = () => {
                                         classItem={cls}
                                         onEdit={handleEditClick}
                                         onDelete={handleDeleteClick}
+                                        onManage={handleManageClick}
                                     />
                                 </motion.div>
                             ))}
@@ -109,6 +118,14 @@ const Classes = () => {
                 onClose={() => setIsModalOpen(false)}
                 onSaved={handleModalSave}
                 classToEdit={classToEdit}
+            />
+
+            <ManageStudentsModal
+                isOpen={isManageModalOpen}
+                onClose={() => setIsManageModalOpen(false)}
+                classId={classToManage?._id}
+                subjectName={classToManage?.subjectName}
+                classes={classes}
             />
         </div>
     );

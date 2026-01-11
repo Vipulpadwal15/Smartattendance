@@ -16,8 +16,8 @@ const Card = ({
                 clsx(
                     'rounded-xl transition-all shadow-sm',
                     glass
-                        ? 'bg-white/70 backdrop-blur-md border border-white/20 dark:bg-gray-800/60 dark:border-gray-700/50'
-                        : 'bg-white border border-gray-100 dark:bg-gray-800 dark:border-gray-700',
+                        ? 'bg-white/70 backdrop-blur-md border border-white/20 text-gray-900 dark:bg-gray-800/60 dark:border-gray-700/50 dark:text-white'
+                        : 'bg-white border border-gray-100 text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-white',
                     !noPadding && 'p-6',
                     className
                 )
