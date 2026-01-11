@@ -104,17 +104,45 @@ const startSession = async (req, res) => {
         );
 
         const sessionToken = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 60 * 1000); // 1 minute expiry (Dynamic QR)
+        const currentQrToken = crypto.randomBytes(16).toString('hex'); // Initial sub-token
+
+        // Extended session time to 5 mins since we have rotation
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
         const session = await AttendanceSession.create({
             classId,
             teacherId: req.user.id,
             sessionToken,
+            currentQrToken,
             isActive: true,
             expiresAt
         });
 
         res.status(201).json(session);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Rotate QR Token (Called by Teacher Frontend)
+// @route   PUT /api/attendance/session/:sessionId/rotate
+// @access  Private (Teacher)
+const rotateQrToken = async (req, res) => {
+    const { sessionId } = req.params;
+    try {
+        const session = await AttendanceSession.findById(sessionId);
+        if (!session) return res.status(404).json({ message: 'Session not found' });
+
+        const newQrToken = crypto.randomBytes(16).toString('hex');
+
+        // Move current to previous, set new current
+        session.previousQrToken = session.currentQrToken;
+        session.currentQrToken = newQrToken;
+        session.lastRotation = Date.now();
+
+        await session.save();
+
+        res.json({ newQrToken });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -153,7 +181,7 @@ const getActiveSession = async (req, res) => {
 // @route   POST /api/attendance/mark-qr
 // @access  Public (Student)
 const markAttendanceQR = async (req, res) => {
-    const { sessionToken, rollNumber } = req.body;
+    const { sessionToken, rollNumber, qrToken } = req.body;
 
     try {
         // 1. Validate Session
@@ -164,10 +192,21 @@ const markAttendanceQR = async (req, res) => {
         });
 
         if (!session) {
-            return res.status(400).json({ message: 'Invalid or Expired QR Code' });
+            return res.status(400).json({ message: 'Invalid or Expired Session' });
         }
 
-        // 2. Find Student
+        // 2. Validate Rotating Token (Security Check with Grace Period)
+        // We allow current token OR the immediately previous token (to handle latency/scan delay)
+        const isValidToken =
+            (session.currentQrToken && qrToken === session.currentQrToken) ||
+            (session.previousQrToken && qrToken === session.previousQrToken);
+
+        if (!isValidToken && session.currentQrToken) {
+            // Only enforce if rotation is active (currentQrToken exists)
+            return res.status(400).json({ message: 'QR Code Expired. Please rescan.' });
+        }
+
+        // 3. Find Student
         const student = await Student.findOne({
             rollNumber,
             classId: session.classId
@@ -177,9 +216,8 @@ const markAttendanceQR = async (req, res) => {
             return res.status(404).json({ message: 'Student not found in this class' });
         }
 
-        // 3. Find or Create Attendance Logic
+        // 4. Find or Create Attendance Logic
         const now = new Date();
-        // Use UTC Midnight to ensure consistency with frontend which sends "YYYY-MM-DD" (parsed as UTC)
         const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
         let attendance = await Attendance.findOne({
@@ -195,7 +233,7 @@ const markAttendanceQR = async (req, res) => {
             });
         }
 
-        // 4. Update Status for specific student
+        // 5. Update Status for specific student
         const studentIndex = attendance.records.findIndex(r => r.studentId.toString() === student._id.toString());
 
         if (studentIndex > -1) {
@@ -228,5 +266,6 @@ module.exports = {
     startSession,
     endSession,
     getActiveSession,
-    markAttendanceQR
+    markAttendanceQR,
+    rotateQrToken
 };

@@ -25,6 +25,16 @@ const attendanceSessionSchema = mongoose.Schema(
             type: Date,
             required: true,
         },
+        currentQrToken: {
+            type: String,
+        },
+        previousQrToken: {
+            type: String,
+        },
+        lastRotation: {
+            type: Date,
+            default: Date.now,
+        },
     },
     { timestamps: true }
 );

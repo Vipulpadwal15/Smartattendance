@@ -6,7 +6,8 @@ const {
     startSession,
     endSession,
     getActiveSession,
-    markAttendanceQR
+    markAttendanceQR,
+    rotateQrToken
 } = require('../controllers/attendanceController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -17,6 +18,7 @@ router.route('/:classId').get(protect, getAttendance);
 router.post('/session/start', protect, startSession);
 router.post('/session/end', protect, endSession);
 router.get('/session/:classId', protect, getActiveSession);
+router.put('/session/:sessionId/rotate', protect, rotateQrToken);
 
 // Student Route (Public or separate auth)
 router.post('/mark-qr', markAttendanceQR);

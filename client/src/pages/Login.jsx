@@ -35,6 +35,8 @@ const Login = () => {
         setIsSubmitting(false);
     };
 
+
+
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900 overflow-hidden relative">
             {/* Background Decoration */}
@@ -92,7 +94,6 @@ const Login = () => {
                     </form>
 
                     <div className="mt-6 text-center text-sm text-gray-500">
-                        <p>Demo Credentials: teacher@example.com / 123456</p>
                         <p className="mt-2">New here? <Link to="/register" className="text-primary hover:underline">Create an account</Link></p>
                     </div>
                 </Card>

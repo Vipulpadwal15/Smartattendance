@@ -10,8 +10,10 @@ import Card from '../components/ui/Card';
 const StudentScan = () => {
     const [searchParams] = useSearchParams();
     const tokenFromUrl = searchParams.get('token');
+    const qrFromUrl = searchParams.get('qr'); // Fix: Get from URL
 
     const [sessionToken, setSessionToken] = useState(tokenFromUrl || '');
+    const [qrToken, setQrToken] = useState(qrFromUrl || ''); // Fix: Init with URL param
     const [rollNumber, setRollNumber] = useState('');
     const [status, setStatus] = useState('idle'); // idle, scanning, submitting, success, error
     const [message, setMessage] = useState('');
@@ -38,8 +40,10 @@ const StudentScan = () => {
             // or just the token XYZ?
             // My generator creates the full URL.
             try {
-                const url = new URL(decodedText);
-                const token = url.searchParams.get('token');
+                const urlObj = new URL(decodedText);
+                const token = urlObj.searchParams.get('token');
+                const qr = urlObj.searchParams.get('qr'); // Extract rotating token
+
                 if (token) {
                     // Check for device lock
                     const locked = localStorage.getItem(`attendance_marked_${token}`);
@@ -52,6 +56,7 @@ const StudentScan = () => {
                     }
 
                     setSessionToken(token);
+                    setQrToken(qr || ''); // Set the dynamic token
                     setStatus('idle');
                     scanner.clear();
                 }
@@ -67,6 +72,7 @@ const StudentScan = () => {
                 }
 
                 setSessionToken(decodedText);
+                setQrToken(''); // Clear qrToken if it's just a plain token string
                 setStatus('idle');
                 scanner.clear();
             }
@@ -95,7 +101,8 @@ const StudentScan = () => {
         try {
             const { data } = await axios.post('/api/attendance/mark-qr', {
                 sessionToken,
-                rollNumber
+                rollNumber,
+                qrToken // Send dynamic token to backend
             });
 
             // Set Lock

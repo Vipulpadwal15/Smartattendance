@@ -16,32 +16,38 @@ const getDashboardStats = async (req, res) => {
         const classIds = classes.map(c => c._id);
 
         // 2. Total Students
-        const studentsCount = await Student.countDocuments({ classId: { $in: classIds } });
+        // We'll calculate students per class map for later use
+        const studentsPerClass = {};
+        for (const cId of classIds) {
+            studentsPerClass[cId] = await Student.countDocuments({ classId: cId });
+        }
+        const totalStudentsCount = Object.values(studentsPerClass).reduce((a, b) => a + b, 0);
 
-        // 3. Overall Attendance Rate (Average of all time)
-        // This can be heavy, for now let's calculate based on Attendance records found
+        // 3. Overall Attendance Rate
         const attendanceRecords = await Attendance.find({ classId: { $in: classIds } });
 
         let totalPresent = 0;
-        let totalRecords = 0;
+        let totalPossible = 0;
 
         attendanceRecords.forEach(att => {
-            if (att.records) {
-                att.records.forEach(studentStatus => {
-                    totalRecords++;
-                    if (studentStatus.status === 'Present') {
-                        totalPresent++;
-                    }
-                });
+            // For each attendance session, potential = number of students in that class
+            const classStudentCount = studentsPerClass[att.classId] || 0;
+            if (classStudentCount > 0) {
+                totalPossible += classStudentCount;
+
+                // Count actual present
+                if (att.records) {
+                    const presentCount = att.records.filter(r => r.status === 'Present').length;
+                    totalPresent += presentCount;
+                }
             }
         });
 
-        const attendanceRate = totalRecords > 0
-            ? Math.round((totalPresent / totalRecords) * 100)
+        const attendanceRate = totalPossible > 0
+            ? Math.round((totalPresent / totalPossible) * 100)
             : 0;
 
-        // 4. Recent Activity (Last 5 scan sessions or updates)
-        // We'll return the last 5 updated attendance docs
+        // 4. Recent Activity
         const recentAttendance = await Attendance.find({ classId: { $in: classIds } })
             .sort({ updatedAt: -1 })
             .limit(5)
@@ -49,14 +55,14 @@ const getDashboardStats = async (req, res) => {
 
         res.json({
             classesCount,
-            studentsCount,
+            studentsCount: totalStudentsCount,
             attendanceRate,
             recentActivity: recentAttendance.map(r => ({
                 id: r._id,
                 subject: r.classId.subjectName,
                 date: r.date,
-                presentCount: r.records.filter(s => s.status === 'Present').length,
-                totalCount: r.records.length,
+                presentCount: r.records ? r.records.filter(s => s.status === 'Present').length : 0,
+                totalCount: studentsPerClass[r.classId] || 0, // Show Total Class Size
                 updatedAt: r.updatedAt
             }))
         });
@@ -73,43 +79,53 @@ const getReportData = async (req, res) => {
     try {
         const teacherId = req.user.id;
         const classes = await Class.find({ teacher: teacherId });
-        const classIds = classes.map(c => c._id);
 
-        // 1. Class Performance (Avg Attendance per Class)
-        // We need to aggregate attendance per class
+        // 1. Class Performance
         const classPerformance = [];
 
         for (const cls of classes) {
+            const studentCount = await Student.countDocuments({ classId: cls._id });
             const atts = await Attendance.find({ classId: cls._id });
+
             let p = 0;
-            let t = 0;
+            let totalSessions = atts.length;
+
+            // Total Possible = sessions * students
+            let t = totalSessions * studentCount;
+
             atts.forEach(a => {
-                a.records.forEach(r => {
-                    t++;
-                    if (r.status === 'Present') p++;
-                });
+                if (a.records) {
+                    p += a.records.filter(r => r.status === 'Present').length;
+                }
             });
+
             const avg = t > 0 ? Math.round((p / t) * 100) : 0;
 
             classPerformance.push({
                 name: cls.subjectName,
-                students: cls.students.length,
+                students: studentCount,
                 avg
             });
         }
 
-        // 2. Weekly Trend (Last 7 Days)
+        // 2. Weekly Trend
         const today = new Date();
-        const start = startOfWeek(today, { weekStartsOn: 1 }); // Monday
-        const end = endOfWeek(today, { weekStartsOn: 1 }); // Sunday
-
+        const start = startOfWeek(today, { weekStartsOn: 1 });
+        const end = endOfWeek(today, { weekStartsOn: 1 });
         const days = eachDayOfInterval({ start, end });
+
+        // Helper to get students count for a classId quickly
+        // Rerun count or optimize? Loop is small (7 days x N classes)
+        // Let's cache student counts
+        const studentCountsMap = {};
+        for (const cls of classes) {
+            studentCountsMap[cls._id] = await Student.countDocuments({ classId: cls._id });
+        }
+        const classIds = classes.map(c => c._id);
+
         const weeklyTrend = [];
 
         for (const day of days) {
-            // Normalize day to query format (UTC midnight usually)
-            // But our db stores UTC midnight. Let's create a range or match expected stored date.
-            // Since we stored date as UTC Midnight, we match that.
             const queryDate = new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate()));
 
             const attToday = await Attendance.find({
@@ -117,18 +133,20 @@ const getReportData = async (req, res) => {
                 date: queryDate
             });
 
-            let p = 0;
-            let t = 0;
+            let dailyPresent = 0;
+            let dailyPossible = 0;
+
             attToday.forEach(a => {
-                a.records.forEach(r => {
-                    t++;
-                    if (r.status === 'Present') p++;
-                });
+                const sCount = studentCountsMap[a.classId] || 0;
+                dailyPossible += sCount;
+                if (a.records) {
+                    dailyPresent += a.records.filter(r => r.status === 'Present').length;
+                }
             });
 
             weeklyTrend.push({
-                day: format(day, 'EEE'), // "Mon", "Tue"
-                attendance: t > 0 ? Math.round((p / t) * 100) : 0
+                day: format(day, 'EEE'),
+                attendance: dailyPossible > 0 ? Math.round((dailyPresent / dailyPossible) * 100) : 0
             });
         }
 

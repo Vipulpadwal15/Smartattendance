@@ -14,6 +14,10 @@ const QRGenerator = () => {
     const [loading, setLoading] = useState(false);
     const [isLocalhost, setIsLocalhost] = useState(false);
 
+    // Rotating QR State
+    const [qrToken, setQrToken] = useState('');
+    const [counter, setCounter] = useState(100); // Progress bar counter
+
     useEffect(() => {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             setIsLocalhost(true);
@@ -51,6 +55,39 @@ const QRGenerator = () => {
         return () => clearInterval(interval);
     }, [session]);
 
+    // NEW: Text formatting for timer (MM:SS)
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    // NEW: Rotate Token Every 7 Seconds
+    useEffect(() => {
+        if (!session || !session.isActive) return;
+
+        const rotationInterval = setInterval(async () => {
+            try {
+                // Call Rotate API
+                const { data } = await axios.put(`/api/attendance/session/${session._id}/rotate`);
+                setQrToken(data.newQrToken);
+                setCounter(100); // Reset progress bar
+            } catch (error) {
+                console.error('Rotation failed', error);
+            }
+        }, 30000); // 30 seconds
+
+        // Progress Bar smoother
+        const progressInterval = setInterval(() => {
+            setCounter((prev) => Math.max(0, prev - (100 / 300))); // Decrease over 30s
+        }, 100);
+
+        return () => {
+            clearInterval(rotationInterval);
+            clearInterval(progressInterval);
+        };
+    }, [session]);
+
     const handleStartSession = async () => {
         setLoading(true);
         try {
@@ -58,6 +95,7 @@ const QRGenerator = () => {
                 classId: selectedClassId
             });
             setSession(data);
+            setQrToken(data.currentQrToken || '');
         } catch (error) {
             console.error('Error starting session', error);
             alert('Failed to start session');
@@ -79,7 +117,7 @@ const QRGenerator = () => {
         }
     };
 
-    const qrUrl = session ? `${window.location.origin}/scan?token=${session.sessionToken}` : '';
+    const qrUrl = session ? `${window.location.origin}/scan?token=${session.sessionToken}&qr=${qrToken}` : '';
 
     return (
         <div className="space-y-6">
@@ -151,8 +189,16 @@ const QRGenerator = () => {
                             <div className="flex items-center text-2xl font-bold text-gray-900 dark:text-white">
                                 <Timer className={`mr-2 h-6 w-6 ${timeLeft < 10 ? 'text-red-500' : 'text-primary'}`} />
                                 <span className={timeLeft < 10 ? 'text-red-500' : 'text-primary'}>
-                                    00:{timeLeft.toString().padStart(2, '0')}
+                                    {formatTime(timeLeft)}
                                 </span>
+                            </div>
+
+                            {/* Rotation Progress Bar */}
+                            <div className="w-full max-w-[250px] mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-primary transition-all duration-100 ease-linear"
+                                    style={{ width: `${counter}%` }}
+                                />
                             </div>
 
                             {timeLeft === 0 && (
