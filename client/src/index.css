@@ -10,7 +10,143 @@
 
 @layer base {
   body {
-    /* using standard gray-900 (same as dark) and gray-100 (same as light) to ensure stability */
-    @apply bg-gray-900 text-gray-100 antialiased font-sans;
+    @apply bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950 text-gray-100 antialiased font-sans;
+    background-attachment: fixed;
   }
+
+  * {
+    @apply transition-colors duration-200;
+  }
+}
+
+@layer utilities {
+
+  /* Glassmorphism Effects */
+  .glass {
+    @apply bg-white/10 backdrop-blur-xl border border-white/20;
+  }
+
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl;
+  }
+
+  /* Gradient Backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .gradient-secondary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+
+  .gradient-orange {
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  }
+
+  .gradient-blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  /* Hover Lift Effect */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-1 shadow-2xl;
+  }
+
+  /* Glow Effects */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.3);
+  }
+
+  .glow-secondary {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+
+  /* Shimmer Animation */
+  .shimmer {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Pulse Glow */
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 30px rgba(79, 70, 229, 0.8);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-600;
 }

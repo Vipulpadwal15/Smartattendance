@@ -253,6 +253,28 @@ const markAttendanceQR = async (req, res) => {
 
         await attendance.save();
 
+        // Socket.io Real-time Update
+        if (req.io) {
+            // Emitting to session room for QR page update
+            req.io.to(sessionToken).emit('attendance_update', {
+                studentName: student.name,
+                rollNumber: student.rollNumber,
+                timestamp: new Date()
+            });
+
+            // Fetch class to get teacher ID for Dashboard update
+            const classDoc = await Class.findById(session.classId);
+            if (classDoc && classDoc.teacher) {
+                // Emitting to teacher's personal room for Dashboard update
+                req.io.to(`teacher_${classDoc.teacher.toString()}`).emit('dashboard_update', {
+                    type: 'new_attendance',
+                    studentName: student.name,
+                    subject: classDoc.subjectName,
+                    timestamp: new Date()
+                });
+            }
+        }
+
         res.json({ message: 'Attendance Marked Successfully', student: student.name });
 
     } catch (error) {
